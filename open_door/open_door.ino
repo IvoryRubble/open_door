@@ -146,7 +146,7 @@ void setup() {
     int nextOffset = readStringFromEEPROM(sizeof(sketchId), ssid);
     readStringFromEEPROM(nextOffset, password);
     Serial.print("Found saved WiFi SSID: "); Serial.println(ssid);
-    Serial.print("password: "); Serial.println(password);
+    // Serial.print("password: "); Serial.println(password);
   } else {
     Serial.println("No saved WiFi creds found");
   }
@@ -181,6 +181,8 @@ void setup() {
   // Bad antenna design workaround:
   // https://forum.arduino.cc/t/no-wifi-connect-with-esp32-c3-super-mini/1324046/12
   WiFi.setTxPower(WIFI_POWER_8_5dBm);
+
+  Serial.print("MAC address: "); Serial.println(WiFi.macAddress());
 
   Serial.print("Connecting to WiFi");
   waitWiFiConnection();
