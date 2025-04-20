@@ -19,30 +19,121 @@ const unsigned long readNewWiFiCredsTimeout = 5000;
 String getMainPage() {
   return R"raw(
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>DOOR</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Door</title>
   <style>
-    body { font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #f8f8f8; }
-    h1 { color: #444; font-size: 80px; }
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      align-items: center;
+      justify-content: center;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+
     button {
-      padding: 20px 30px;
-      font-size: 80px;
-      margin-top: 20px;
-      background-color: #4CAF50;
-      color: white;
+      position: relative;
+      padding: 2rem 4rem;
+      font-size: 2rem;
       border: none;
-      border-radius: 5px;
+      border-radius: 10px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      transition: transform 0.1s ease, background-color 0.3s ease;
+      min-width: 250px;
+    }
+
+    button:hover:enabled {
+      background-color: #0056b3;
+    }
+
+    button:active:enabled {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      margin: -12px 0 0 -12px;
+      border: 4px solid white;
+      border-top: 4px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+
+    .loading .spinner {
+      display: block;
+    }
+
+    .loading .btn-text {
+      visibility: hidden;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #errorMessage {
+      margin-top: 1rem;
+      color: red;
+      font-size: 1rem;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <form action="/openDoor" method="POST">
-    <button type="submit">Open door</button>
-  </form>
+  <button id="toggleButton" onclick="openDoor()">
+    <span class="btn-text">Open door</span>
+    <div class="spinner"></div>
+  </button>
+  <div id="errorMessage"></div>
+
+  <script>
+    function openDoor() {
+      const button = document.getElementById('toggleButton');
+      const errorDiv = document.getElementById('errorMessage');
+
+      errorDiv.textContent = '';
+      button.classList.add('loading');
+      button.disabled = true;
+
+      fetch('/openDoor')
+        .then(response => {
+          if (!response.ok) throw new Error(response.status + ', ' + response.statusText);
+          return response.text();
+        })
+        .then(data => {
+          console.log('Response: "', data + '"');
+        })
+        .catch(error => {
+          //alert('Request failed: ' + error)
+          console.error('Request failed:', error);
+          errorDiv.textContent = 'Request failed: ' + error;
+        })
+        .finally(() => {
+          button.classList.remove('loading');
+          button.disabled = false;
+        });
+    }
+  </script>
 </body>
-</html> 
+</html>
 )raw";
 }
 
@@ -57,8 +148,7 @@ void handleOpenDoor() {
   digitalWrite(doorButtonPin, LOW);
   digitalWrite(ledPin, LOW);
   Serial.println("Pressed door button");
-  server.sendHeader("Location", "/");
-  server.send(303);  
+  server.send(200);  
 }
 
 void blinkLed() {
@@ -188,7 +278,7 @@ void setup() {
   waitWiFiConnection();
 
   server.on("/", handleRoot);
-  server.on("/openDoor", HTTP_POST, handleOpenDoor);
+  server.on("/openDoor", HTTP_GET, handleOpenDoor);
 
   server.begin();
   Serial.println("Started HTTP server");
