@@ -16,6 +16,9 @@ const unsigned long doorButtonPressTime = 1500;
 
 const unsigned long readNewWiFiCredsTimeout = 5000;
 
+unsigned long delayStartTime = 0;
+unsigned long delayTimeout = 0;
+
 String getMainPage() {
   return R"raw(
 <!DOCTYPE html>
@@ -206,19 +209,38 @@ int readStringFromEEPROM(int addrOffset, String &strToRead)
   return addrOffset + 1 + length;
 }
 
+void setDelay(unsigned long newDelayTimeout) {
+  delayStartTime = millis();
+  delayTimeout = newDelayTimeout;
+}
+
+bool isDelayPassed() {
+  return millis() - delayStartTime > delayTimeout;
+}
+
 void setup() {
   pinMode(ledPin, OUTPUT);
   pinMode(doorButtonPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
   digitalWrite(doorButtonPin, LOW);
   
+  blinkLowPeriod = 50;
+  blinkHighPeriod = 100;
+
   Serial.begin(115200);
-  delay(2000);
+
+  setDelay(2000);
+  while (!isDelayPassed()) { blinkLed(); }
+  digitalWrite(ledPin, LOW);
+
   Serial.println();
   Serial.println();
   Serial.println("Please stand by...");
   Serial.println();
-  delay(1000);
+
+  setDelay(1000);
+  while (!isDelayPassed()) { blinkLed(); }
+  digitalWrite(ledPin, LOW);
 
   EEPROM.begin(512);
   int sketchIdRead; 
@@ -243,8 +265,10 @@ void setup() {
   Serial.println();
 
   Serial.println("Enter new WiFi SSID:");
-  const unsigned long startCheckInputTime = millis();
-  while ((!isSavedDataFound || (millis() - startCheckInputTime) < readNewWiFiCredsTimeout) && !Serial.available()) { }
+  
+  setDelay(readNewWiFiCredsTimeout);
+  while ((!isSavedDataFound || !isDelayPassed()) && !Serial.available()) { blinkLed(); }
+  digitalWrite(ledPin, LOW);
   if (Serial.available()) {
     ssid = Serial.readString();
     ssid.trim();
