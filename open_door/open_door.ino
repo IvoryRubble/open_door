@@ -312,7 +312,7 @@ void loop() {
   server.handleClient();
 
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi connection lost. Reconnecting..");
+    Serial.print("WiFi connection lost. Reconnecting");
     waitWiFiConnection();
   }
   
