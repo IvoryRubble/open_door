@@ -16,6 +16,8 @@ const unsigned long doorButtonPressTime = 1500;
 
 const unsigned long readNewWiFiCredsTimeout = 5000;
 
+unsigned long wifiConnectionTimeout = 60000;
+
 unsigned long delayStartTime = 0;
 unsigned long delayTimeout = 0;
 
@@ -163,22 +165,32 @@ void blinkLed() {
 }
 
 void waitWiFiConnection() {
-  blinkLowPeriod = 250;
-  blinkHighPeriod = 250;
+  blinkLowPeriod = 500;
+  blinkHighPeriod = 500;
+  unsigned long connectionStartTime = millis(); 
   unsigned long previousTimePrintConnectionProgress = 0; 
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED && millis() - connectionStartTime < wifiConnectionTimeout) {
     blinkLed();
-    if (millis() - previousTimePrintConnectionProgress > 250) {
+    if (millis() - previousTimePrintConnectionProgress > 1000) {
       Serial.print(".");
       previousTimePrintConnectionProgress = millis();
     }
+    delay(100);
   }
   digitalWrite(ledPin, LOW);
   Serial.println();
 
-  Serial.println("WiFi connected");
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("WiFi connected");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("Connection timeout expired");
+    Serial.println("Reboot...");
+    delay(1000);
+    ESP.restart();
+  }
+  
 }
 
 int writeStringToEEPROM(int addrOffset, const String &strToWrite)
